@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Our Shared Space ❤️</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght=0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #070a13;
+      color: #f3f4f6;
+      overflow-x: hidden;
+    }
+    .serif-title {
+      font-family: 'Playfair Display', serif;
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0b1120;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #d4af37;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #f3c63f;
+    }
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-8px); }
+      40%, 80% { transform: translateX(8px); }
+    }
+    .shake-error {
+      animation: shake 0.35s ease-in-out;
+      border-color: #f43f5e !important;
+    }
+  </style>
+</head>
+<body class="relative min-h-screen flex flex-col justify-between selection:bg-rose-500/30 selection:text-white">
+
+  <canvas id="ambient-canvas" class="fixed inset-0 w-full h-full pointer-events-none z-0"></canvas>
+
+  <div class="relative z-10 flex-grow flex flex-col justify-between p-4 sm:p-6 md:p-8 max-w-6xl mx-auto w-full">
+    
+    <header class="text-center my-6 md:my-8">
+      <div class="inline-flex items-center gap-2 px-3.5 py-1.5 bg-slate-900/80 border border-amber-500/20 rounded-full text-[11px] font-semibold text-amber-400 mb-4 backdrop-blur-md shadow-lg">
+        <span class="flex h-2 w-2 relative">
+          <span id="badge-pulse" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+          <span id="badge-dot" class="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+        </span>
+        <span id="header-status">Connecting to Sanctuary Cloud...</span>
+      </div>
+      
+      <h1 class="serif-title text-4xl sm:text-5xl md:text-6xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-rose-200 to-amber-300 drop-shadow-md">
+        Our Shared Space <span class="text-rose-500 text-3xl sm:text-4xl md:text-5xl align-middle">❤️</span>
+      </h1>
+      <p id="header-subtitle" class="text-slate-400 mt-2.5 text-xs sm:text-sm tracking-widest max-w-md mx-auto uppercase italic font-light">
+        A quiet sanctuary across the miles
+      </p>
+    </header>
+
+    <main class="flex-grow flex items-center justify-center w-full my-4">
+
+      <section id="login-section" class="w-full max-w-md bg-slate-950/90 border border-slate-800/80 p-6 sm:p-8 rounded-3xl shadow-2xl backdrop-blur-lg text-center transition-all duration-300">
+        <div class="w-16 h-16 bg-gradient-to-tr from-rose-500/10 to-amber-500/10 border border-rose-500/20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+          <svg class="w-7 h-7 text-rose-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 11-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z"/>
+          </svg>
+        </div>
+        <h2 class="serif-title text-2xl font-semibold text-white mb-1.5">Who is entering?</h2>
+        <p class="text-slate-400 text-xs sm:text-sm mb-6">Unlock our dashboard by typing your secret passcode below.</p>
+
+        <form id="login-form" onsubmit="window.handleLogin(event)" class="space-y-4">
+          <div class="relative text-left">
+            <label for="passcode" class="block text-[11px] font-bold text-amber-300 uppercase tracking-wider mb-2">Secret Passcode</label>
+            <div class="relative">
+              <input type="password" id="passcode" placeholder="Enter your secret word..." class="w-full bg-slate-900 border border-slate-700 focus:border-amber-400 rounded-xl py-3 px-4 pl-10 text-white placeholder-slate-600 outline-none transition-all duration-200 shadow-inner" required autocomplete="off">
+              <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-600">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"/>
+                </svg>
+              </div>
+            </div>
+            
+            <div id="login-error-msg" class="hidden mt-2.5 text-xs text-rose-400 flex items-center gap-1.5 justify-center bg-rose-950/20 py-1.5 rounded-lg border border-rose-500/10 animate-pulse">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+              </svg>
+              <span>Incorrect passcode. Think of our special words.</span>
+            </div>
+          </div>
+
+          <div class="pt-2">
+            <button type="submit" class="w-full bg-gradient-to-r from-amber-500 to-rose-500 hover:from-amber-600 hover:to-rose-600 text-white font-medium py-3 px-4 rounded-xl shadow-lg transition-all focus:outline-none flex items-center justify-center gap-2">
+              <span class="font-semibold tracking-wide text-sm">Enter Our Universe</span>
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <section id="writer-section" class="hidden w-full max-w-5xl bg-slate-950/90 border border-slate-800/80 p-5 sm:p-8 rounded-3xl shadow-2xl backdrop-blur-lg text-left">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-5 mb-6">
+          <div class="flex items-center gap-3">
+            <div class="w-11 h-11 bg-rose-500/10 border border-rose-500/20 rounded-xl flex items-center justify-center text-rose-300">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0115.75 21H5.25A2.25 2.25 0 013 18.75V8.25A2.25 2.25 0 015.25 6H10"/>
+              </svg>
+            </div>
+            <div>
+              <h2 class="serif-title text-xl font-bold text-white tracking-wide">Writer's Dashboard</h2>
+              <p class="text-[11px] text-rose-400/90 uppercase tracking-widest font-semibold">Leaving love notes & sweet memories across space & time</p>
+            </div>
+          </div>
+          <button onclick="window.logout()" class="text-xs bg-slate-900 border border-slate-800 py-2 px-3 rounded-xl text-slate-400 hover:text-white transition-all flex items-center gap-1.5 shadow-md">
+            Logout
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          <div class="lg:col-span-7 space-y-4">
+            <h3 id="form-heading" class="serif-title text-lg font-semibold text-rose-300 flex items-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15"/>
+              </svg>
+              Compose a New Envelope
+            </h3>
+            
+            <form id="letter-form" onsubmit="window.handleLetterSubmit(event)" class="space-y-4">
+              <input type="hidden" id="edit-letter-id" value="">
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label for="letter-title" class="block text-[11px] font-bold text-amber-300 uppercase tracking-wider mb-2">Letter Title</label>
+                  <input type="text" id="letter-title" placeholder="A cozy rainy Sunday..." class="w-full bg-slate-900/80 border border-slate-800 focus:border-rose-400/60 rounded-xl py-3 px-4 text-white placeholder-slate-600 outline-none transition-all" required autocomplete="off">
+                </div>
+                <div>
+                  <label for="letter-emoji" class="block text-[11px] font-bold text-amber-300 uppercase tracking-wider mb-2">Select Mood/Emoji</label>
+                  <select id="letter-emoji" class="w-full bg-slate-900/80 border border-slate-800 focus:border-rose-400/60 rounded-xl py-3 px-4 text-white outline-none transition-all">
+                    <option value="✉️">✉️ Classic Envelope</option>
+                    <option value="💖">💖 Warm Hugs & Love</option>
+                    <option value="🌟">🌟 Bright Star Sparkle</option>
+                    <option value="☕">☕ Cozy Sunday Warmth</option>
+                    <option value="🌙">🌙 Sweet Midnight Dreams</option>
+                    <option value="🌸">🌸 Beautiful Spring Bloom</option>
+                    <option value="🏡">🏡 Shared Home Future</option>
+                    <option value="✈️">✈️ Traveled Miles</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label for="letter-hint" class="block text-[11px] font-bold text-amber-300 uppercase tracking-wider mb-2">Outer Hint (Shown on Envelope Grid)</label>
+                <input type="text" id="letter-hint" placeholder="Open when..." class="w-full bg-slate-900/80 border border-slate-800 focus:border-rose-400/60 rounded-xl py-3 px-4 text-white placeholder-slate-600 outline-none transition-all" required autocomplete="off">
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label for="letter-image" class="block text-[11px] font-bold text-amber-300 uppercase tracking-wider mb-2">Add a Photo URL (Optional)</label>
+                  <input type="text" id="letter-image" placeholder="https://i.imgur.com/image.png" class="w-full bg-slate-900/80 border border-slate-800 focus:border-rose-400/60 rounded-xl py-3 px-4 text-white placeholder-slate-600 outline-none text-xs" autocomplete="off">
+                </div>
+                <div>
+                  <label for="letter-lock" class="block text-[11px] font-bold text-amber-300 uppercase tracking-wider mb-2">Unlock Password (Optional)</label>
+                  <input type="text" id="letter-lock" placeholder="e.g., our anniversary" class="w-full bg-slate-900/80 border border-slate-800 focus:border-rose-400/60 rounded-xl py-3 px-4 text-white placeholder-slate-600 outline-none text-xs" autocomplete="off">
+                </div>
+              </div>
+
+              <div>
+                <label for="letter-content" class="block text-[11px] font-bold text-amber-300 uppercase tracking-wider mb-2">Letter Content</label>
+                <textarea id="letter-content" rows="6" placeholder="Write down your thoughts..." class="w-full bg-slate-900/80 border border-slate-800 focus:border-rose-400/60 rounded-xl py-3 px-4 text-white placeholder-slate-600 outline-none transition-all resize-none leading-relaxed" required></textarea>
+              </div>
+
+              <div class="pt-1 flex gap-3">
+                <button type="submit" id="btn-publish" class="flex-1 bg-gradient-to-r from-rose-500 via-pink-500 to-amber-500 hover:from-rose-600 hover:to-amber-600 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2">
+                  <span id="submit-button-text">Publish Letter to Jaan ✉️</span>
+                </button>
+                <button type="button" id="btn-cancel-edit" onclick="window.exitEditingMode()" class="hidden bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold px-4 py-3.5 rounded-xl text-xs transition-all">
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <div class="lg:col-span-5 flex flex-col h-full border-t lg:border-t-0 lg:border-l border-slate-800/85 pt-6 lg:pt-0 lg:pl-8">
+            <h3 class="serif-title text-lg font-semibold text-amber-300 flex items-center gap-2 mb-4">
+              Manage Sent Letters
+            </h3>
+            <p class="text-[11px] text-slate-400 mb-4 italic">Instant cloud records. You can now edit or remove documents safely.</p>
+            <div id="writer-letters-list" class="space-y-3 overflow-y-auto max-h-[460px] pr-2 flex-grow"></div>
+          </div>
+        </div>
+
+        <div id="toast-message" class="hidden mt-4 p-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs rounded-xl flex items-center justify-center gap-2">
+          <span id="toast-text">Letter dispatched beautifully!</span>
+        </div>
+      </section>
+
+      <section id="reader-section" class="hidden w-full max-w-5xl bg-slate-950/90 border border-slate-800/80 p-5 sm:p-8 rounded-3xl shadow-2xl backdrop-blur-lg text-left">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800 pb-5 mb-6 gap-4">
+          <div class="flex items-center gap-3">
+            <div class="w-11 h-11 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center justify-center text-amber-300">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/>
+              </svg>
+            </div>
+            <div>
+              <h2 class="serif-title text-xl font-bold text-white tracking-wide">The Reader's Vault</h2>
+              <p class="text-[11px] text-amber-400/90 uppercase tracking-widest font-semibold">Treasuring her written emotions, photos & milestones</p>
+            </div>
+          </div>
+          
+          <div class="flex items-center justify-between sm:justify-start gap-3">
+            <span id="vault-count-badge" class="bg-amber-500/10 border border-amber-500/20 text-amber-400 text-xs font-semibold px-3 py-1.5 rounded-full">
+              0 Letters Saved
+            </span>
+            <button onclick="window.logout()" class="text-xs bg-slate-900 border border-slate-800 py-2 px-3 rounded-xl text-slate-400 hover:text-white transition-all shadow-md">
+              Logout
+            </button>
+          </div>
+        </div>
+
+        <div id="letters-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-h-[55vh] overflow-y-auto pr-1"></div>
+      </section>
+
+    </main>
+
+    <footer class="w-full text-center mt-6 text-xs text-slate-500 z-10 space-y-3">
+      <div class="max-w-md mx-auto bg-slate-900/40 border border-slate-800/80 rounded-2xl p-3 text-left">
+        <button onclick="window.toggleConfigPanel()" class="w-full flex items-center justify-between text-slate-400 hover:text-white transition-all">
+          <span class="text-[10px] uppercase tracking-widest text-slate-400">Cloud Integration Control Panel</span>
+        </button>
+        <div id="config-panel" class="hidden mt-3 pt-3 border-t border-slate-800/80 space-y-2 text-[11px]">
+          <textarea id="firebase-config-input" rows="3" placeholder='{"apiKey": "AIzaSy..."}' class="w-full font-mono bg-slate-950 border border-slate-800 rounded-lg p-2 text-slate-300 text-[10px]"></textarea>
+          <div class="flex gap-2">
+            <button onclick="window.saveCustomFirebase()" class="flex-1 bg-amber-500 text-slate-950 font-bold py-1.5 rounded-lg text-center text-[10px] uppercase">Apply Connection Keys</button>
+            <button onclick="window.clearAppDatabase()" class="bg-slate-800 text-rose-300 px-3 py-1.5 rounded-lg text-center text-[10px] uppercase">Clear Cache</button>
+          </div>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <div id="letter-modal" class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="relative w-full max-w-xl bg-slate-900 border-2 border-amber-500/30 rounded-3xl p-6 shadow-2xl flex flex-col justify-between max-h-[85vh]">
+      <div class="flex items-center justify-between border-b border-amber-500/10 pb-4 mb-4">
+        <div class="flex items-center gap-3 text-left">
+          <span id="modal-emoji" class="text-3xl">✉️</span>
+          <div>
+            <h3 id="modal-title" class="serif-title text-xl font-bold text-white">Letter Title</h3>
+            <p id="modal-date" class="text-[10px] text-amber-400 font-mono tracking-wider uppercase mt-1">Date</p>
+          </div>
+        </div>
+        <button onclick="window.closeLetterModal()" class="text-slate-400 hover:text-white bg-slate-800 p-2 rounded-full">✕</button>
+      </div>
+      <div class="flex-grow overflow-y-auto pr-2 my-2 min-h-[160px] text-left">
+        <div id="modal-image-container" class="hidden text-center my-4">
+          <img id="modal-image-img" src="" alt="Memory Image" class="max-w-xs mx-auto rounded-xl border border-amber-500/20 shadow-lg">
+        </div>
+        <div id="modal-body" class="serif-title text-slate-200 leading-relaxed italic whitespace-pre-wrap">Content...</div>
+      </div>
+      <div class="border-t border-amber-500/10 pt-4 flex justify-between items-center text-xs text-amber-300">
+        <span>With eternal love ❤️</span>
+        <button onclick="window.closeLetterModal()" class="bg-gradient-to-r from-amber-500 to-rose-500 text-slate-950 font-bold px-5 py-2.5 rounded-xl">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="delete-confirm-modal" class="hidden fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-rose-500/40 rounded-2xl p-6 shadow-2xl text-center max-w-sm w-full">
+      <h3 class="serif-title text-lg font-bold text-white mb-2">Erase this note forever?</h3>
+      <p class="text-xs text-slate-400 mb-6">This cannot be undone. The entry will vanish instantly.</p>
+      <div class="flex gap-3">
+        <button onclick="window.closeDeleteModal()" class="flex-1 bg-slate-800 text-slate-300 py-2.5 rounded-xl text-xs">Cancel</button>
+        <button onclick="window.confirmDeleteLetter()" class="flex-1 bg-rose-500 text-white font-bold py-2.5 rounded-xl text-xs">Yes, Delete Note</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let lettersCollection = [];
+    const localStorageLettersKey = "our_shared_space_letters_v2";
+    const localStorageConfigKey = "our_shared_space_fb_config";
+    let activeRole = null; 
+    let currentDeleteId = null;
+    let db = null; 
+
+    const myAutoFirebaseConfig = {
+      apiKey: "AIzaSyBLGSP1Rs0NrCD_yXb5QbVYaNMqSnHnTVk",
+      authDomain: "our-shared-space-d680c.firebaseapp.com",
+      projectId: "our-shared-space-d680c",
+      storageBucket: "our-shared-space-d680c.firebasestorage.app",
+      messagingSenderId: "87838940194",
+      appId: "1:87838940194:web:74d2384af0fa38d165be7b"
+    };
+
+    try {
+      const offlineCache = localStorage.getItem(localStorageLettersKey);
+      if (offlineCache) lettersCollection = JSON.parse(offlineCache);
+    } catch(e) {}
+
+    window.initializeCloudServices = function(config) {
+      try {
+        if (!firebase.apps.length) firebase.initializeApp(config);
+        db = firebase.firestore();
+        
+        db.collection("letters").orderBy("timestamp", "desc").onSnapshot((snapshot) => {
+          let freshList = [];
+          snapshot.forEach((doc) => {
+            let item = doc.data();
+            item.id = doc.id;
+            freshList.push(item);
+          });
+          lettersCollection = freshList;
+          localStorage.setItem(localStorageLettersKey, JSON.stringify(lettersCollection));
+          
+          updateBadgeVisuals(true, "Database: Cloud Sync Online");
+          if(activeRole === "reader") window.renderEnvelopes(lettersCollection);
+          if(activeRole === "writer") window.renderWriterDashboardRows();
+        }, (error) => {
+          console.warn("Rules locked or network down:", error);
+          updateBadgeVisuals(false, "Database Rules Locked (Local Active)");
+          engageFallbackRendering();
+        });
+      } catch (err) {
+        updateBadgeVisuals(false, "Connection Profile Error");
+        engageFallbackRendering();
+      }
+    };
+
+    function engageFallbackRendering() {
+      if(activeRole === "reader") window.renderEnvelopes(lettersCollection);
+      if(activeRole === "writer") window.renderWriterDashboardRows();
+    }
+
+    function updateBadgeVisuals(isOnline, titleText) {
+      const label = document.getElementById("header-status");
+      const dot = document.getElementById("badge-dot");
+      const pulse = document.getElementById("badge-pulse");
+      if(label) label.innerText = titleText;
+      if(dot && pulse) {
+        dot.className = isOnline ? "relative inline-flex rounded-full h-2 w-2 bg-emerald-500" : "relative inline-flex rounded-full h-2 w-2 bg-amber-500";
+        pulse.className = isOnline ? "animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" : "animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75";
+      }
+    }
+
+    window.handleLogin = function(e) {
+      if(e) e.preventDefault();
+      const passField = document.getElementById("passcode");
+      const errorMsg = document.getElementById("login-error-msg");
+      const inputVal = passField ? passField.value.trim().toLowerCase() : "";
+
+      if (inputVal === "babyy") {
+        activeRole = "reader";
+        document.getElementById("login-section").classList.add("hidden");
+        document.getElementById("reader-section").classList.remove("hidden");
+        window.renderEnvelopes(lettersCollection);
+      } else if (inputVal === "lovely") { // Changed from 'jaan' to 'lovely' 
+        activeRole = "writer";
+        document.getElementById("login-section").classList.add("hidden");
+        document.getElementById("writer-section").classList.remove("hidden");
+        window.renderWriterDashboardRows();
+      } else {
+        if(errorMsg) errorMsg.classList.remove("hidden");
+        if(passField) {
+          passField.classList.add("shake-error");
+          setTimeout(() => passField.classList.remove("shake-error"), 400);
+        }
+      }
+    };
+
+    window.logout = function() {
+      activeRole = null;
+      window.exitEditingMode();
+      document.getElementById("passcode").value = "";
+      document.getElementById("login-error-msg").classList.add("hidden");
+      document.getElementById("writer-section").classList.add("hidden");
+      document.getElementById("reader-section").classList.add("hidden");
+      document.getElementById("login-section").classList.remove("hidden");
+    };
+
+    // Form Submissions handles both NEW creations and EDITS
+    window.handleLetterSubmit = function(e) {
+      if(e) e.preventDefault();
+      const targetId = document.getElementById("edit-letter-id").value;
+
+      const letterData = {
+        title: document.getElementById("letter-title").value.trim(),
+        emoji: document.getElementById("letter-emoji").value,
+        hint: document.getElementById("letter-hint").value.trim(),
+        image: document.getElementById("letter-image").value.trim(),
+        lockPassword: document.getElementById("letter-lock").value.trim().toLowerCase(),
+        content: document.getElementById("letter-content").value.trim(),
+        timestamp: Date.now()
+      };
+
+      if (targetId) {
+        // Mode: UPDATE EXISTING
+        if (db) {
+          db.collection("letters").doc(targetId).update(letterData)
+            .then(() => { triggerFormSuccessReset("Letter updated successfully! ✨"); window.exitEditingMode(); })
+            .catch(err => alert("Update Error: " + err.message));
+        } else {
+          const index = lettersCollection.findIndex(x => x.id === targetId);
+          if(index !== -1) {
+            letterData.id = targetId;
+            lettersCollection[index] = letterData;
+            localStorage.setItem(localStorageLettersKey, JSON.stringify(lettersCollection));
+          }
+          triggerFormSuccessReset("Letter updated locally! ✨");
+          window.exitEditingMode();
+          window.renderWriterDashboardRows();
+        }
+      } else {
+        // Mode: CREATE NEW
+        if (db) {
+          db.collection("letters").add(letterData)
+            .then(() => triggerFormSuccessReset("Letter dispatched beautifully! ✉️"))
+            .catch(err => alert("Post Error: " + err.message));
+        } else {
+          letterData.id = "local-" + Date.now();
+          lettersCollection.unshift(letterData);
+          localStorage.setItem(localStorageLettersKey, JSON.stringify(lettersCollection));
+          triggerFormSuccessReset("Letter dispatched beautifully! ✉️");
+          window.renderWriterDashboardRows();
+        }
+      }
+    };
+
+    // Load data from list entry back up into input fields
+    window.enterEditingMode = function(id) {
+      const target = lettersCollection.find(x => x.id === id);
+      if(!target) return;
+
+      document.getElementById("edit-letter-id").value = target.id;
+      document.getElementById("letter-title").value = target.title;
+      document.getElementById("letter-emoji").value = target.emoji;
+      document.getElementById("letter-hint").value = target.hint;
+      document.getElementById("letter-image").value = target.image || "";
+      document.getElementById("letter-lock").value = target.lockPassword || "";
+      document.getElementById("letter-content").value = target.content;
+
+      document.getElementById("form-heading").innerHTML = `📝 Modify Envelope Properties`;
+      document.getElementById("submit-button-text").innerText = "Update & Save Changes ✨";
+      document.getElementById("btn-cancel-edit").classList.remove("hidden");
+      document.getElementById("letter-title").focus();
+    };
+
+    window.exitEditingMode = function() {
+      document.getElementById("edit-letter-id").value = "";
+      document.getElementById("letter-form").reset();
+      document.getElementById("form-heading").innerHTML = `✉️ Compose a New Envelope`;
+      document.getElementById("submit-button-text").innerText = "Publish Letter to Jaan ✉️";
+      document.getElementById("btn-cancel-edit").classList.add("hidden");
+    };
+
+    function triggerFormSuccessReset(msg) {
+      document.getElementById("letter-form").reset();
+      const toast = document.getElementById("toast-message");
+      const toastText = document.getElementById("toast-text");
+      if (toast && toastText) {
+        toastText.innerText = msg;
+        toast.classList.remove("hidden");
+        setTimeout(() => toast.classList.add("hidden"), 4000);
+      }
+    }
+
+    window.renderEnvelopes = function(letters) {
+      const grid = document.getElementById("letters-grid");
+      const badge = document.getElementById("vault-count-badge");
+      if(!grid) return;
+      grid.innerHTML = "";
+      if(badge) badge.innerText = `${letters.length} Letter${letters.length === 1 ? '' : 's'} Saved`;
+
+      if (letters.length === 0) {
+        grid.innerHTML = `<div class="col-span-full py-12 text-center text-slate-500 italic text-sm">Vault feels empty...</div>`;
+        return;
+      }
+
+      letters.forEach((item) => {
+        const isLocked = (item.lockPassword && item.lockPassword.trim().length > 0);
+        const card = document.createElement("div");
+        card.className = "group bg-slate-900/60 border border-slate-800 hover:border-amber-500/30 p-6 rounded-2xl transition-all cursor-pointer min-h-[160px] flex flex-col justify-between";
+        card.setAttribute("onclick", `window.attemptOpenLetter("${item.id}")`);
+
+        card.innerHTML = `
+          <div>
+            <div class="flex items-start justify-between gap-2 mb-2">
+              <span class="text-2xl">${isLocked ? '🔒' : item.emoji}</span>
+              <span class="text-[9px] font-mono text-slate-600 uppercase tracking-widest">${formatDisplayDate(item.timestamp)}</span>
+            </div>
+            <h4 class="serif-title text-base font-bold text-slate-100 group-hover:text-amber-200">${isLocked ? 'Sealed Envelope' : item.title}</h4>
+            <p class="text-xs text-slate-400 mt-2 line-clamp-2 leading-relaxed font-light">${item.hint}</p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-800/40 flex items-center justify-between text-[10px] text-amber-400/80 uppercase font-medium">
+            <span>${isLocked ? 'Requires Secret Key' : 'Click to Open'}</span>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    };
+
+    window.renderWriterDashboardRows = function() {
+      const container = document.getElementById("writer-letters-list");
+      if(!container) return;
+      container.innerHTML = "";
+
+      if(lettersCollection.length === 0) {
+        container.innerHTML = `<div class="py-8 text-center text-slate-600 text-xs italic">No items written yet.</div>`;
+        return;
+      }
+
+      lettersCollection.forEach((item) => {
+        const row = document.createElement("div");
+        row.className = "bg-slate-900/90 border border-slate-800 p-3.5 rounded-xl flex items-center justify-between gap-4";
+        row.innerHTML = `
+          <div class="min-w-0 flex items-center gap-3">
+            <span class="text-xl flex-shrink-0">${item.emoji}</span>
+            <div class="min-w-0 text-left">
+              <h4 class="text-xs font-bold text-slate-200 line-clamp-1">${item.title}</h4>
+              <p class="text-[10px] text-slate-500 font-mono mt-0.5">${formatDisplayDate(item.timestamp)} ${item.lockPassword ? '• 🔒 ' : ''}</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-1 flex-shrink-0">
+            <button onclick="window.enterEditingMode('${item.id}')" title="Edit Letter" class="text-slate-500 hover:text-amber-400 p-2 rounded-lg transition-all">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L6.832 19.82a4.5 4.5 0 01-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 011.13-1.897L16.863 4.487zm0 0L19.5 7.125"/>
+              </svg>
+            </button>
+            <button onclick="window.triggerEraseRequest('${item.id}')" title="Delete Permanent" class="text-slate-500 hover:text-rose-400 p-2 rounded-lg transition-all">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </button>
+          </div>
+        `;
+        container.appendChild(row);
+      });
+    };
+
+    window.attemptOpenLetter = function(id) {
+      const target = lettersCollection.find(x => x.id === id);
+      if(!target) return;
+      const isLocked = (target.lockPassword && target.lockPassword.trim().length > 0);
+
+      if (isLocked) {
+        setTimeout(() => {
+          const entry = prompt(`🔒 Passcode hint:\n"${target.hint}"\n\nEnter code to read:`);
+          if (entry === null) return;
+          if (entry.trim().toLowerCase() === target.lockPassword.trim().toLowerCase()) {
+            displayModalWindow(target);
+          } else {
+            alert("❌ Incorrect password.");
+          }
+        }, 50);
+      } else {
+        displayModalWindow(target);
+      }
+    };
+
+    function displayModalWindow(envelope) {
+      document.getElementById("modal-emoji").innerText = envelope.emoji;
+      document.getElementById("modal-title").innerText = envelope.title;
+      document.getElementById("modal-date").innerText = formatDisplayDate(envelope.timestamp);
+      document.getElementById("modal-body").innerText = envelope.content;
+
+      const imgWrapper = document.getElementById("modal-image-container");
+      const imgTag = document.getElementById("modal-image-img");
+
+      if (envelope.image && envelope.image.trim().startsWith("http")) {
+        if(imgTag) imgTag.src = envelope.image.trim();
+        if(imgWrapper) imgWrapper.classList.remove("hidden");
+      } else {
+        if(imgWrapper) imgWrapper.classList.add("hidden");
+      }
+
+      const modal = document.getElementById("letter-modal");
+      if(modal) modal.classList.remove("hidden");
+    }
+
+    window.closeLetterModal = function() {
+      document.getElementById("letter-modal").classList.add("hidden");
+    };
+
+    window.triggerEraseRequest = function(id) {
+      currentDeleteId = id;
+      document.getElementById("delete-confirm-modal").classList.remove("hidden");
+    };
+
+    window.closeDeleteModal = function() {
+      currentDeleteId = null;
+      document.getElementById("delete-confirm-modal").classList.add("hidden");
+    };
+
+    window.confirmDeleteLetter = function() {
+      if (!currentDeleteId) return;
+      if (db) {
+        db.collection("letters").doc(currentDeleteId).delete()
+          .then(() => window.closeDeleteModal())
+          .catch(err => alert("Delete Error: " + err.message));
+      } else {
+        lettersCollection = lettersCollection.filter(x => x.id !== currentDeleteId);
+        localStorage.setItem(localStorageLettersKey, JSON.stringify(lettersCollection));
+        window.closeDeleteModal();
+        window.renderWriterDashboardRows();
+      }
+    };
+
+    function formatDisplayDate(ms) {
+      if(!ms) return "";
+      return new Date(ms).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    window.toggleConfigPanel = function() {
+      document.getElementById("config-panel").classList.toggle("hidden");
+    };
+
+    window.saveCustomFirebase = function() {
+      const txt = document.getElementById("firebase-config-input").value.trim();
+      if(!txt) return;
+      try {
+        localStorage.setItem(localStorageConfigKey, JSON.stringify(JSON.parse(txt)));
+        window.location.reload();
+      } catch(e) { alert("Syntax formatting error."); }
+    };
+
+    window.clearAppDatabase = function() {
+      if(confirm("Reset all local configurations?")) {
+        localStorage.clear();
+        window.location.reload();
+      }
+    };
+
+    // Ambient Starfield Canvas Logic
+    (function initiateBackgroundCanvas() {
+      const cvs = document.getElementById("ambient-canvas");
+      if(!cvs) return;
+      const ctx = cvs.getContext("2d");
+      let items = [];
+      function resize() { cvs.width = window.innerWidth; cvs.height = window.innerHeight; }
+      window.addEventListener("resize", resize);
+      resize();
+      for (let i = 0; i < 45; i++) {
+        items.push({
+          x: Math.random() * cvs.width,
+          y: Math.random() * cvs.height,
+          radius: Math.random() * 1.8 + 0.4,
+          speedY: Math.random() * 0.35 + 0.1,
+          opacity: Math.random() * 0.5 + 0.2,
+          isHeart: Math.random() > 0.8
+        });
+      }
+      function loop() {
+        ctx.clearRect(0, 0, cvs.width, cvs.height);
+        for (let i = 0; i < items.length; i++) {
+          let p = items[i];
+          ctx.fillStyle = p.isHeart ? `rgba(244, 63, 94, ${p.opacity})` : `rgba(212, 175, 55, ${p.opacity})`;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.isHeart ? p.radius * 1.3 : p.radius, 0, Math.PI * 2);
+          ctx.fill();
+          p.y -= p.speedY;
+          if (p.y < -10) { p.y = cvs.height + 10; p.x = Math.random() * cvs.width; }
+        }
+        requestAnimationFrame(loop);
+      }
+      loop();
+    })();
+
+    if (myAutoFirebaseConfig && myAutoFirebaseConfig.apiKey) {
+      window.initializeCloudServices(myAutoFirebaseConfig);
+    } else {
+      engageFallbackRendering();
+    }
+  </script>
+</body>
+</html>
